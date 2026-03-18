@@ -1,0 +1,38 @@
+---
+description: Naming conventions for variables, functions, files, and audit data
+alwaysApply: true
+---
+
+# Naming Conventions
+
+## General
+
+- Use clear, readable names — avoid abbreviations and technical jargon
+- Variables and functions: `camelCase` with descriptive intent
+- Types and interfaces: `PascalCase`
+- Config constants: `UPPER_SNAKE_CASE` (e.g. `DEFAULT_AUDIT_SCOPE`, `QUICK_AUDIT_CRITERIA`)
+
+## Files
+
+| Folder | Pattern | Example |
+|--------|---------|---------|
+| config | `{name}.config.ts` | `audit.config.ts` |
+| utils | `{name}.util.ts` | `wcagMapping.util.ts` |
+| hooks | `{domain}.hooks.ts` | `audit.hooks.ts` |
+| contexts | `{Name}Context.tsx` | `AuditContext.tsx` |
+| components | `{ComponentName}.tsx` | `CriterionCard.tsx` |
+| types | `{domain}.ts` | `finding.ts` |
+
+## Audit data keys
+
+| Key | Description |
+|-----|-------------|
+| `auditScope` | Selected scope tier: `quick`, `typical`, `full_aa`, or `full_aaa` |
+| `auditType` | Type of audit: `web`, `design`, `document`, or `native_app` |
+| `samplePages` | Array of pages included in the audit sample set |
+| `auditResults` | Per-criterion per-sample-page evaluation outcomes |
+| `findings` | Individual accessibility issues within an audit result |
+| `scanResults` | Raw axe-core automated scan output per sample page |
+| `criterionId` | WCAG criterion identifier (e.g. `"1.1.1"`) |
+| `outcome` | Evaluation result: `passed`, `failed`, `inapplicable`, `cantTell`, `untested` |
+| `priority` | Finding severity: `critical`, `major`, `minor`, `advisory` |

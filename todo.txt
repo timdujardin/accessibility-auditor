@@ -1,0 +1,48 @@
+TODO:
+
+- Alles rond audit file import, de import is puur een locale import waar de json data in state wordt gestoken, dus niks
+rechtstreeks in de database injecteren. Binnen de import flow moet je na succesvolle import de mogelijkheid hebben om
+die imported data weg te schrijven naar de supabase database, maar via een Publish knop. Net zoals je zou doen bij een
+nieuw samengestelde audit. Qua import, is er support voor EARL/JSON-LD zoals bijvoorbeeld
+/Users/tim.dujardin/Library/CloudStorage/OneDrive-iO/Accessibility/Audits/Done/BankB/Full\ Website\
+Audit/FullPackage-bankb-critical-user-flows-and-most-popular-pages-evaluation.json? De
+https://github.com/w3c/wai-wcag-em-report-tool/ bevat de JSON import en export flow ook al, maar in een andere tech
+stack, misschien kan je daar de juiste info vinden hiervoor? Maak een plan!
+
+- Gebruik geen prop drilling maar eerder context, ik zie bijvoorbeeld             <ScanProgressCard
+              key={id}
+              pageId={id}
+              title={title}
+              url={url}
+              result={results[id]}
+              isScanning={scanningPageId === id}
+              isExpanded={expandedPage === id}
+              expandedViolationGap={expandedViolationGap}
+              approvedKeys={approvedKeys}
+              dismissedKeys={dismissedKeys}
+              onScan={() => onScanPage({ id, title, url, ...rest })}
+              onToggleExpand={() => setExpandedPage((prev) => (prev === id ? null : id))}
+              onToggleViolationGap={setExpandedViolationGap}
+              onApproveViolation={onApproveViolation}
+              onDismissViolation={onDismissViolation}
+            /> die veel te veel props mee krijgt
+
+- Zorg ervoor dat ik in de Stepper op elke stap kan klikken en dat de state behouden blijft uit de ingevulde steps. dus
+niet alleen terug naar vorige step via de Back knop onderaan elke step. Maak een plan!
+
+- Ik moet de audit ook kunnen exporteren naar JSON bestand zoals de WCAG-EM (2.0) kan, maak een plan!
+
+
+MAYBE:
+
+- Op basis van quick, typical of full audit ook alleen maar automated evaluatie doen van die criteria scope, nu doet
+axe-core puppeteer nog de hele WCAG 2.2 AA scope. (Vraag de auditor bij start van automated testing of hij de typical
+scope automated wil testen of de hele scope automated) Maak een plan!
+
+- Gebruik base-ui components ipv @mui/material? Maak een plan!
+
+- Install @next/bundle-analyzer en kijk naar /Users/tim.dujardin/Git/jnj-spectrum/next.config.ts setup. Maak een plan!
+
+LOCAL:
+
+- Fix prettier on save

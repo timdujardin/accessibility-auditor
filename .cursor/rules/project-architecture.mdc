@@ -1,0 +1,40 @@
+---
+description: Core project architecture and folder conventions for the WCAG-EM accessibility auditor
+alwaysApply: true
+---
+
+# Project Architecture
+
+## Tech Stack
+
+- Next.js 14+ (App Router) with TypeScript (strict mode)
+- Material UI (MUI) v6 + MUI X Charts
+- Supabase (PostgreSQL, Auth, Storage)
+- axe-core + Puppeteer for automated accessibility scanning
+
+## Folder structure
+
+- `config/` — app-specific configuration (audit scopes, WCAG criteria, technology options). Suffix: `.config.ts`
+- `src/app/` — Next.js App Router pages and API routes
+- `src/components/` — UI components following Atomic Design (atoms, molecules, organisms)
+- `src/utils/` — pure, reusable functions (no React, no side effects). Suffix: `.util.ts`
+- `src/hooks/` — custom React hooks grouped by logical domain. Suffix: `.hooks.ts`
+- `src/contexts/` — React Context providers + consumer hooks. Suffix: `Context.tsx`
+- `src/types/` — shared TypeScript interfaces and type definitions
+- `src/lib/` — third-party integrations (Supabase client, axe-core scanner)
+- `supabase/migrations/` — SQL migration files for database schema
+
+## Components (Atomic Design)
+
+- `atoms/` — smallest building blocks (StatusBadge, PriorityChip, ConformanceIcon, WcagLevelBadge)
+- `molecules/` — compositions of atoms (CriterionCard, SamplePageRow, IssueCard, FindingForm, ScreenshotUploader)
+- `organisms/` — full sections with business logic (AuditWizard, ReportingPanel, DashboardCharts, ScanResultsTable)
+
+## Key rules
+
+- No `.find()` or `.filter()` calls in components — extract to utils or hooks
+- No prop drilling — use Context + custom hooks for shared state
+- No magic numbers — use named constants from `config/audit.config.ts` or `config/wcag.config.ts`
+- Pages are lazy-loaded via `React.lazy()` with a `Suspense` fallback
+- All Supabase queries go through hooks in `src/hooks/`, never called directly in components
+- API routes in `src/app/api/` handle server-side logic (scanning, AI, screenshots)

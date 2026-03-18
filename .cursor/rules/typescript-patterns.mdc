@@ -1,0 +1,41 @@
+---
+description: TypeScript patterns for utilities, types, and configuration
+globs: "**/*.ts"
+alwaysApply: false
+---
+
+# TypeScript Patterns
+
+## Types
+
+- Core interfaces in `src/types/`: `Audit`, `SamplePage`, `WcagCriterion`, `AuditResult`, `Finding`, `ScanResult`
+- Use `interface` for object shapes, `type` for unions and aliases
+- Enum-like unions preferred over TypeScript enums:
+
+```typescript
+type AuditScope = 'quick' | 'typical' | 'full_aa' | 'full_aaa';
+type AuditType = 'web' | 'design' | 'document' | 'native_app';
+type FindingPriority = 'critical' | 'major' | 'minor' | 'advisory';
+type EvaluationOutcome = 'passed' | 'failed' | 'inapplicable' | 'cantTell' | 'untested';
+```
+
+## Utilities
+
+Utility functions are pure and side-effect free:
+
+```typescript
+// Good: pure function with typed return
+export function getCriteriaForScope(scope: AuditScope): string[] {
+  return SCOPE_CRITERIA_MAP[scope];
+}
+
+// Bad: side effects in utility
+export function fetchAndFormatAudit() { ... }
+```
+
+## Configuration
+
+- All magic numbers and scope definitions live in `config/audit.config.ts`
+- WCAG criteria definitions live in `config/wcag.config.ts`
+- Derived constants (e.g. `FULL_AA_AUDIT_CRITERIA`) computed from base WCAG config
+- Shared lookup arrays exported from config

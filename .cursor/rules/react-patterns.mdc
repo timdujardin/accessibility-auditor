@@ -1,0 +1,37 @@
+---
+description: React component and state management patterns
+globs: "**/*.tsx"
+alwaysApply: false
+---
+
+# React Patterns
+
+## Composition over props
+
+- Components consume context directly via hooks — no deep prop chains
+- State lives in contexts: `AuditContext`, `AuthContext`, `ThemeContext`
+- Each context exposes a `useXxx()` hook (e.g. `useAudit()`, `useAuth()`, `useTheme()`)
+
+## Component rules
+
+- Functional components only (no class components)
+- No data transformation logic in components — delegate to utils or hooks
+- Custom hooks for any reusable or complex logic (criteria filtering, scan results mapping)
+- Hooks grouped by domain in `hooks/` folder, one file per logical grouping
+- Server Components by default in App Router; add `'use client'` only when needed (state, effects, event handlers)
+
+## Accessibility
+
+- All interactive elements must have visible focus styles (`:focus-visible`)
+- Use `role`, `aria-label`, `aria-checked`, `aria-expanded` where appropriate
+- Table headers use `scope="col"` or `scope="row"` attributes
+- Navigation landmarks use proper semantic HTML (`<nav>`, `<main>`, `<aside>`)
+- Form inputs always have associated `<label>` elements
+- Color is never the sole means of conveying information
+- All images have meaningful `alt` text or `alt=""` for decorative images
+
+## MUI conventions
+
+- Use MUI's `sx` prop for one-off styles, CSS logical properties where possible
+- Use MUI theme for consistent spacing, colors, and typography
+- Prefer MUI components over custom HTML for forms, buttons, dialogs, tables

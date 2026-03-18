@@ -1,0 +1,177 @@
+'use client';
+
+import type { ImportResultRow } from '@/hooks/tables/importPreview.table';
+import type { ImportedAudit } from '@/utils/earlTransform.util';
+import type { FC, ReactNode } from 'react';
+
+import { useCallback, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+
+import Button from '@/components/atoms/button/Button';
+import ContentCard from '@/components/atoms/content-card/ContentCard';
+import Divider from '@/components/atoms/divider/Divider';
+import ErrorAlert from '@/components/atoms/error/Error';
+import Heading from '@/components/atoms/heading/Heading';
+import Icon from '@/components/atoms/icon/Icon';
+import Tag from '@/components/atoms/tag/Tag';
+import Text from '@/components/atoms/text/Text';
+import Wrapper from '@/components/atoms/wrapper/Wrapper';
+import DataTable from '@/components/molecules/data-table/DataTable';
+import AppShell from '@/components/organisms/app-shell/AppShell';
+import { useImportPreviewTable } from '@/hooks/tables/importPreview.table';
+import { useAppDispatch } from '@/redux/store';
+import { displayValue } from '@/utils/format.util';
+
+import { handleFileSelect, handleImport } from './page.callbacks';
+
+const ImportAuditPage: FC = () => {
+  const router = useRouter();
+  const dispatch = useAppDispatch();
+
+  const [importedAudit, setImportedAudit] = useState<ImportedAudit | null>(null);
+  const [parseError, setParseError] = useState<string | null>(null);
+
+  const previewData: ImportResultRow[] = useMemo(
+    () =>
+      importedAudit
+        ? importedAudit.results.slice(0, 50).map((r) => ({
+            criterionId: r.criterionId,
+            outcome: r.outcome,
+            description: r.description,
+          }))
+        : [],
+    [importedAudit],
+  );
+  const importTable = useImportPreviewTable(previewData);
+
+  const onFileSelect = useCallback(
+    (files: FileList | null) => handleFileSelect(setParseError, setImportedAudit, files),
+    [],
+  );
+
+  const onImport = useCallback(() => handleImport(importedAudit, dispatch, router), [importedAudit, dispatch, router]);
+
+  let importPreviewContent: ReactNode = null;
+  if (importedAudit) {
+    const { title, commissioner, scope, conformanceTarget, samplePages: auditSamplePages, results } = importedAudit;
+    importPreviewContent = (
+      <>
+        <ContentCard sx={{ marginBlockEnd: 3 }}>
+          <Wrapper sx={{ display: 'flex', alignItems: 'center', gap: 1, marginBlockEnd: 2 }}>
+            <Icon name="CheckCircle" color="success" />
+            <Heading tag="h6">File Parsed Successfully</Heading>
+          </Wrapper>
+
+          <Wrapper sx={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBlockEnd: 2 }}>
+            <Wrapper>
+              <Text variant="body2" color="text.secondary">
+                Title
+              </Text>
+              <Text fontWeight={600}>{title}</Text>
+            </Wrapper>
+            <Wrapper>
+              <Text variant="body2" color="text.secondary">
+                Commissioner
+              </Text>
+              <Text>{displayValue(commissioner)}</Text>
+            </Wrapper>
+            <Wrapper>
+              <Text variant="body2" color="text.secondary">
+                Scope
+              </Text>
+              <Tag label={scope} size="small" color="primary" />
+            </Wrapper>
+            <Wrapper>
+              <Text variant="body2" color="text.secondary">
+                Conformance Target
+              </Text>
+              <Text>{conformanceTarget}</Text>
+            </Wrapper>
+          </Wrapper>
+
+          <Divider sx={{ marginBlockEnd: 2 }} />
+
+          <Text variant="subtitle2" fontWeight={600} sx={{ marginBlockEnd: 1 }}>
+            Sample Pages ({auditSamplePages.length})
+          </Text>
+          {auditSamplePages.map((p, i) => (
+            <Text key={i} variant="body2" color="text.secondary">
+              {p.title} — {p.url}
+            </Text>
+          ))}
+
+          <Text variant="subtitle2" fontWeight={600} sx={{ marginBlockStart: 2, marginBlockEnd: 1 }}>
+            Results ({results.length})
+          </Text>
+          <DataTable table={importTable} size="small" stickyHeader maxHeight={300} />
+        </ContentCard>
+
+        <Wrapper sx={{ display: 'flex', gap: 2 }}>
+          <Button variant="contained" size="large" onClick={onImport}>
+            Load into Wizard
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={() => {
+              setImportedAudit(null);
+              setParseError(null);
+            }}
+          >
+            Cancel
+          </Button>
+        </Wrapper>
+      </>
+    );
+  }
+
+  return (
+    <AppShell>
+      <Heading tag="h1" size="h4" gutterBottom>
+        Import Audit
+      </Heading>
+      <Text variant="body1" color="text.secondary" sx={{ marginBlockEnd: 3 }}>
+        Import an existing accessibility audit from an EARL/JSON-LD file generated by the W3C WCAG-EM Report Tool or
+        compatible tools.
+      </Text>
+
+      <ErrorAlert error={parseError ?? undefined} />
+
+      {!importedAudit && (
+        <ContentCard>
+          <Wrapper
+            sx={{
+              border: '2px dashed',
+              borderColor: 'divider',
+              borderRadius: 2,
+              padding: 6,
+              textAlign: 'center',
+              cursor: 'pointer',
+              '&:hover': { borderColor: 'primary.main', backgroundColor: 'action.hover' },
+            }}
+          >
+            <Icon name="CloudUpload" sx={{ fontSize: 48, color: 'text.secondary', marginBlockEnd: 2 }} />
+            <Heading tag="h6" color="text.secondary" gutterBottom>
+              Drop an EARL/JSON-LD file here
+            </Heading>
+            <Text variant="body2" color="text.secondary" sx={{ marginBlockEnd: 2 }}>
+              or click to browse
+            </Text>
+            <Button component="label" variant="contained">
+              Select File
+              <input
+                type="file"
+                hidden
+                accept=".json,.jsonld,.json-ld,application/ld+json,application/json"
+                onChange={(e) => onFileSelect(e.target.files)}
+              />
+            </Button>
+          </Wrapper>
+        </ContentCard>
+      )}
+
+      {importPreviewContent}
+    </AppShell>
+  );
+};
+
+export default ImportAuditPage;

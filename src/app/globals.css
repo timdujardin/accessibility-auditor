@@ -1,0 +1,19 @@
+:root {
+  --color-passed: #2e7d32;
+  --color-failed: #c62828;
+  --color-warning: #f57f17;
+  --color-critical: #b71c1c;
+  --color-untested: #9e9e9e;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
