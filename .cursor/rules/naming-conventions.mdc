@@ -1,5 +1,5 @@
 ---
-description: Naming conventions for variables, functions, files, and audit data
+description: Naming conventions for variables, functions, and files
 alwaysApply: true
 ---
 
@@ -10,29 +10,25 @@ alwaysApply: true
 - Use clear, readable names — avoid abbreviations and technical jargon
 - Variables and functions: `camelCase` with descriptive intent
 - Types and interfaces: `PascalCase`
-- Config constants: `UPPER_SNAKE_CASE` (e.g. `DEFAULT_AUDIT_SCOPE`, `QUICK_AUDIT_CRITERIA`)
+- Config constants: `UPPER_SNAKE_CASE` (e.g. `DEFAULT_PAGE_SIZE`, `MAX_UPLOAD_SIZE`)
 
 ## Files
 
 | Folder | Pattern | Example |
 |--------|---------|---------|
 | config | `{name}.config.ts` | `audit.config.ts` |
-| utils | `{name}.util.ts` | `wcagMapping.util.ts` |
-| hooks | `{domain}.hooks.ts` | `audit.hooks.ts` |
-| contexts | `{Name}Context.tsx` | `AuditContext.tsx` |
-| components | `{ComponentName}.tsx` | `CriterionCard.tsx` |
-| types | `{domain}.ts` | `finding.ts` |
+| utils | `{name}.util.ts` | `format.util.ts` |
+| hooks | `{domain}.hooks.ts` | `api.hooks.ts` |
+| tables | `{domain}.table.tsx` | `userList.table.tsx` |
+| contexts | `{Name}Context.tsx` | `AuthContext.tsx` |
+| services | `{domain}.service.ts` | `scan.service.ts` |
+| types | `{domain}.ts` (in `src/@types/`) | `user.ts` |
+| redux slices | `{domain}.ts` (in `src/redux/slices/`) | `cart.ts` |
+| auth | `auth.{purpose}.ts` | `auth.middleware.ts` |
+| components | `{ComponentName}.tsx` | `DataTable.tsx` |
+| co-located constants | `{kebab-name}.constants.ts` | `data-table.constants.ts` |
+| co-located callbacks | `{kebab-name}.callbacks.ts` | `page.callbacks.ts` |
+| co-located schemas | `{kebab-name}.schema.ts` | `login.schema.ts` |
+| co-located types | `{kebab-name}.types.ts` | `data-table.types.ts` |
 
-## Audit data keys
-
-| Key | Description |
-|-----|-------------|
-| `auditScope` | Selected scope tier: `quick`, `typical`, `full_aa`, or `full_aaa` |
-| `auditType` | Type of audit: `web`, `design`, `document`, or `native_app` |
-| `samplePages` | Array of pages included in the audit sample set |
-| `auditResults` | Per-criterion per-sample-page evaluation outcomes |
-| `findings` | Individual accessibility issues within an audit result |
-| `scanResults` | Raw axe-core automated scan output per sample page |
-| `criterionId` | WCAG criterion identifier (e.g. `"1.1.1"`) |
-| `outcome` | Evaluation result: `passed`, `failed`, `inapplicable`, `cantTell`, `untested` |
-| `priority` | Finding severity: `critical`, `major`, `minor`, `advisory` |
+Component files use PascalCase (`DataTable.tsx`), co-located files use kebab-case (`data-table.constants.ts`).

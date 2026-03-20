@@ -1,3 +1,7 @@
+FIXME:
+
+- Fix DevTools serialization of audit json import data (browser tab crasht, in incognito werkt het wel perfect)
+
 TODO:
 
 - Alles rond audit file import, de import is puur een locale import waar de json data in state wordt gestoken, dus niks

@@ -1,0 +1,75 @@
+---
+description: Next.js App Router patterns for pages, API routes, and middleware
+globs: "src/app/**"
+alwaysApply: false
+---
+
+# Next.js Patterns
+
+## Server vs Client components
+
+- Server Components by default; add `'use client'` only when state, effects, or event handlers are needed
+- Server pages fetch data and delegate rendering to a client component
+- Page-specific client components live in `_components/` next to `page.tsx`
+- Name pattern: `{PageName}PageContent.tsx`
+
+## Server page pattern
+
+```typescript
+const Page = async () => {
+  await requireLoggedIn();
+  const supabase = await createClient();
+  const [error, data] = await safeAwait(getData(supabase));
+  if (error) return <ErrorAlert error={error} />;
+  return <PageContent data={data} />;
+};
+
+export default Page;
+```
+
+## Co-located page files
+
+- `page.callbacks.ts` — extracted event handlers and async logic, receiving dependencies (setState, dispatch, router) as parameters
+- `page.constants.ts` — page-specific constants (step definitions, color maps, etc.)
+- Pages import and wrap callbacks in `useCallback`, passing dependencies:
+
+```typescript
+const onAction = useCallback(
+  (args) => handleAction(setError, dispatch, args),
+  [dispatch],
+);
+```
+
+## API routes
+
+- Use `route.ts` with named exports matching HTTP methods (`POST`, `GET`, etc.)
+- Accept `NextRequest`, return `NextResponse.json()` or `Response`
+- Validate input at the top of the handler, return early on errors
+- Keep heavy dependencies (Puppeteer, AI SDKs) lazy-loaded inside the handler
+
+## Middleware
+
+- Single root `src/middleware.ts` that delegates to `src/auth/auth.middleware.ts`
+- Use `matcher` config to exclude static assets
+- Auth middleware handles redirect logic (unauthenticated -> login, authenticated -> dashboard)
+
+## Dynamic routes
+
+- Folder convention: `[param]/` (e.g. `[id]/`)
+- In Next.js 15+, `params` is a `Promise` that must be awaited:
+
+```typescript
+interface PageProps {
+  readonly params: Promise<{ id: string }>;
+}
+
+const Page = async ({ params }: PageProps) => {
+  const { id } = await params;
+};
+```
+
+## Layout
+
+- Root layout in `src/app/layout.tsx` wraps providers in order: MUI cache -> Redux store -> Theme -> Auth
+- `export const metadata: Metadata` for static metadata in layouts and pages
+- Use `generateMetadata` for dynamic per-route metadata when needed

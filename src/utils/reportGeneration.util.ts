@@ -1,5 +1,6 @@
 import type { EvaluationOutcome, WcagCriterion } from '@/@types/criteria';
 import type { FindingPriority } from '@/@types/finding';
+import type { SamplePageRef, SamplePageSummary } from '@/@types/sample';
 import type { AuditResultRow, FindingRow, FindingScreenshotRow } from '@/hooks/findings.hooks';
 import type { ScanPageResultDraft } from '@/redux/slices/audit';
 
@@ -16,7 +17,7 @@ export interface ConformanceOverviewRow {
   overallOutcome: EvaluationOutcome;
 }
 
-export interface DashboardStats {
+interface DashboardStats {
   totalCriteria: number;
   passedCriteria: number;
   failedCriteria: number;
@@ -129,11 +130,6 @@ export const getActiveCriteria = (criteriaIds: string[]): WcagCriterion[] => {
   return WCAG_CRITERIA.filter((c) => criteriaIds.includes(c.id));
 };
 
-interface SamplePageRef {
-  id: string;
-  title: string;
-}
-
 /**
  * Builds the conformance overview rows for the dashboard table.
  * @param {WcagCriterion[]} activeCriteria - The WCAG criteria in scope.
@@ -169,7 +165,7 @@ export const buildConformanceRows = (
   });
 };
 
-export interface PageConformanceStats {
+interface PageConformanceStats {
   pageId: string;
   pageTitle: string;
   passed: number;
@@ -236,7 +232,7 @@ export const buildPageConformanceStats = (
   });
 };
 
-export interface FindingStatEntry {
+interface FindingStatEntry {
   priority: FindingPriority;
   principle: number;
   samplePageTitle: string;
@@ -268,7 +264,7 @@ export const buildFindingsForStats = (
   });
 };
 
-export interface PieChartEntry {
+interface PieChartEntry {
   id: string;
   value: number;
   label: string;
@@ -304,7 +300,7 @@ export const buildPageIdToTitle = (samplePages: SamplePageRef[]): Record<string,
   return map;
 };
 
-export interface ReportScreenshot {
+interface ReportScreenshot {
   src: string;
   alt: string;
 }
@@ -329,12 +325,6 @@ export interface ReportPageGroup {
   pageTitle: string;
   pageUrl: string;
   findings: ReportFinding[];
-}
-
-interface SamplePageWithUrl {
-  id: string;
-  title: string;
-  url: string;
 }
 
 /**
@@ -375,7 +365,7 @@ const collectScreenshots = (
  * @param {FindingRow[]} findings - All findings from the audit.
  * @param {AuditResultRow[]} results - Audit results linking findings to criteria and pages.
  * @param {WcagCriterion[]} activeCriteria - WCAG criteria in scope.
- * @param {SamplePageWithUrl[]} samplePages - Sample pages with id, title, and url.
+ * @param {SamplePageSummary[]} samplePages - Sample pages with id, title, and url.
  * @param {FindingScreenshotRow[]} screenshots - Manual finding screenshots.
  * @param {Record<string, ScanPageResultDraft>} scanResults - Automated scan results keyed by page ID.
  * @returns {ReportPageGroup[]} Findings grouped per sample page with enriched data.
@@ -384,7 +374,7 @@ export const buildReportByPage = (
   findings: FindingRow[],
   results: AuditResultRow[],
   activeCriteria: WcagCriterion[],
-  samplePages: SamplePageWithUrl[],
+  samplePages: SamplePageSummary[],
   screenshots: FindingScreenshotRow[],
   scanResults: Record<string, ScanPageResultDraft>,
 ): ReportPageGroup[] => {

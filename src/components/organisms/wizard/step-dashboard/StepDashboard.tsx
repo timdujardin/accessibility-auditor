@@ -48,8 +48,8 @@ const StepDashboard: FC<StepDashboardProps> = ({ auditScope, samplePages, onPubl
   const scanResults = useAppSelector(selectScanResults);
   const reduxSamplePages = useAppSelector(selectSamplePages);
 
-  const criteriaIds = getCriteriaForScope(auditScope);
-  const activeCriteria = getActiveCriteria(criteriaIds);
+  const criteriaIds = useMemo(() => getCriteriaForScope(auditScope), [auditScope]);
+  const activeCriteria = useMemo(() => getActiveCriteria(criteriaIds), [criteriaIds]);
 
   const conformanceRows = useMemo(
     () => buildConformanceRows(activeCriteria, results, samplePages),

@@ -4,11 +4,24 @@ import { useDispatch, useSelector, useStore } from 'react-redux';
 import audit from '@/redux/slices/audit';
 import criteria from '@/redux/slices/criteria';
 
-export const makeStore = () => {
-  const rootReducer = combineReducers({ audit, criteria });
+const rootReducer = combineReducers({ audit, criteria });
 
+const DEVTOOLS_ARRAY_LIMIT = 50;
+const devToolsReplacer = (_key: string, value: unknown): unknown => {
+  if (Array.isArray(value) && value.length > DEVTOOLS_ARRAY_LIMIT) {
+    return `<<${value.length} items>>`;
+  }
+
+  return value;
+};
+
+export const makeStore = () => {
   return configureStore({
     reducer: rootReducer,
+    devTools: {
+      maxAge: 25,
+      serialize: { replacer: devToolsReplacer as never },
+    },
   });
 };
 

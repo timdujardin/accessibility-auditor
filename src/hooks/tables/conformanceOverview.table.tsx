@@ -1,6 +1,7 @@
 'use client';
 
 import type { ConformanceLevel, EvaluationOutcome } from '@/@types/criteria';
+import type { SamplePageRef } from '@/@types/sample';
 import type { ConformanceOverviewRow } from '@/utils/reportGeneration.util';
 import type { ColumnDef } from '@tanstack/react-table';
 
@@ -10,11 +11,6 @@ import { createColumnHelper, getCoreRowModel, useReactTable } from '@tanstack/re
 
 import ConformanceIcon from '@/components/atoms/conformance-icon/ConformanceIcon';
 import WcagLevelBadge from '@/components/atoms/wcag-level-badge/WcagLevelBadge';
-
-interface SamplePageRef {
-  id: string;
-  title: string;
-}
 
 const columnHelper = createColumnHelper<ConformanceOverviewRow>();
 

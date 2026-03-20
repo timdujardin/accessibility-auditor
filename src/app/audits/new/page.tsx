@@ -2,7 +2,7 @@
 
 import type { FC } from 'react';
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 
 import Alert from '@/components/atoms/alert/Alert';
@@ -59,12 +59,10 @@ const NewAuditPage: FC = () => {
   const { action: doPublish, status: publishStatus, error: publishError } = useAction(publishAudit);
   const isPublishing = publishStatus === 'loading';
 
-  const reduxPages = samplePages.map((p) => ({
-    id: p.id,
-    title: p.title,
-    url: p.url,
-    auditMode: p.auditMode,
-  }));
+  const reduxPages = useMemo(
+    () => samplePages.map((p) => ({ id: p.id, title: p.title, url: p.url, auditMode: p.auditMode })),
+    [samplePages],
+  );
 
   const onPublish = useCallback(() => handlePublish(user, auditState, doPublish), [user, auditState, doPublish]);
 

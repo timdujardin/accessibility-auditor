@@ -1,13 +1,9 @@
 import type { AuditScope } from '@/@types/audit';
-
-export interface SamplePage {
-  id: string;
-  title: string;
-}
+import type { SamplePageRef } from '@/@types/sample';
 
 export interface StepDashboardProps {
   auditScope: AuditScope;
-  samplePages: SamplePage[];
+  samplePages: SamplePageRef[];
   onPublish?: () => Promise<void>;
   isPublishing?: boolean;
 }

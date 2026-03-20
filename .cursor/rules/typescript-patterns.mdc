@@ -1,5 +1,5 @@
 ---
-description: TypeScript patterns for utilities, types, and configuration
+description: TypeScript patterns for utilities, types, services, and state
 globs: "**/*.ts"
 alwaysApply: false
 ---
@@ -8,15 +8,13 @@ alwaysApply: false
 
 ## Types
 
-- Core interfaces in `src/types/`: `Audit`, `SamplePage`, `WcagCriterion`, `AuditResult`, `Finding`, `ScanResult`
+- Shared interfaces in `src/@types/`, one file per domain
 - Use `interface` for object shapes, `type` for unions and aliases
 - Enum-like unions preferred over TypeScript enums:
 
 ```typescript
-type AuditScope = 'quick' | 'typical' | 'full_aa' | 'full_aaa';
-type AuditType = 'web' | 'design' | 'document' | 'native_app';
-type FindingPriority = 'critical' | 'major' | 'minor' | 'advisory';
-type EvaluationOutcome = 'passed' | 'failed' | 'inapplicable' | 'cantTell' | 'untested';
+type Status = 'active' | 'inactive' | 'pending';
+type Priority = 'critical' | 'major' | 'minor' | 'advisory';
 ```
 
 ## Utilities
@@ -25,17 +23,48 @@ Utility functions are pure and side-effect free:
 
 ```typescript
 // Good: pure function with typed return
-export function getCriteriaForScope(scope: AuditScope): string[] {
-  return SCOPE_CRITERIA_MAP[scope];
-}
+export const formatCurrency = (amount: number, locale = 'en'): string => {
+  return new Intl.NumberFormat(locale, { style: 'currency', currency: 'EUR' }).format(amount);
+};
 
 // Bad: side effects in utility
-export function fetchAndFormatAudit() { ... }
+export function fetchAndFormat() { ... }
 ```
+
+## Services
+
+- Services in `src/services/` encapsulate API calls and business logic
+- Exported as modules of async functions (not classes)
+- Services use database clients from `src/server/`
+- Components never import services directly; hooks in `src/hooks/` wrap them
+
+```typescript
+// Good: service function with injected client
+export const getItems = async (supabase: SupabaseClient): Promise<Item[]> => {
+  const { data, error } = await supabase.from('items').select('*');
+  if (error) throw error;
+  return data;
+};
+```
+
+## Redux
+
+- Each slice defines state shape, reducers, and selectors in one file
+- Use Immer's draft mutation pattern or return a new state object — never mix frozen references with mutations
+- Co-locate selectors with the slice:
+
+```typescript
+export const selectItems = (state: AppState) => state.items.list;
+export const selectIsLoading = (state: AppState) => state.items.isLoading;
+```
+
+## Schemas
+
+- Validation schemas use Zod in `.schema.ts` files
+- Co-located with the feature they validate
 
 ## Configuration
 
-- All magic numbers and scope definitions live in `config/audit.config.ts`
-- WCAG criteria definitions live in `config/wcag.config.ts`
-- Derived constants (e.g. `FULL_AA_AUDIT_CRITERIA`) computed from base WCAG config
-- Shared lookup arrays exported from config
+- App-wide constants and lookup tables live in `config/*.config.ts`
+- Single-use constants live in co-located `.constants.ts` files
+- Derived constants computed from base config at module level

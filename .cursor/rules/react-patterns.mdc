@@ -6,19 +6,56 @@ alwaysApply: false
 
 # React Patterns
 
+## State management
+
+- Complex multi-step or cross-component state: Redux Toolkit slices in `src/redux/slices/`
+- Auth and theme: React Context in `src/contexts/`
+- Components read Redux state via typed selectors (`useAppSelector`) and dispatch via `useAppDispatch`
+- Each context exposes a `useXxx()` consumer hook (e.g. `useAuth()`, `useTheme()`)
+
 ## Composition over props
 
-- Components consume context directly via hooks — no deep prop chains
-- State lives in contexts: `AuditContext`, `AuthContext`, `ThemeContext`
-- Each context exposes a `useXxx()` hook (e.g. `useAudit()`, `useAuth()`, `useTheme()`)
+- Components consume shared state via hooks (Redux selectors or context hooks), not deep prop chains
+- Complex event handlers extracted to co-located `.callbacks.ts` files
+- Callbacks receive dependencies (setState, dispatch, router) as parameters — keeps them testable and decoupled
 
-## Component rules
+## Component structure
 
-- Functional components only (no class components)
+Arrow function with `FC<Props>` typing — no function declarations for components:
+
+```tsx
+const ComponentName: FC<ComponentNameProps> = ({ prop1, prop2 }) => {
+  return ( ... );
+};
+
+export default ComponentName;
+```
+
+- `export default ComponentName` at the bottom of the file — never `export default function`
 - No data transformation logic in components — delegate to utils or hooks
-- Custom hooks for any reusable or complex logic (criteria filtering, scan results mapping)
-- Hooks grouped by domain in `hooks/` folder, one file per logical grouping
-- Server Components by default in App Router; add `'use client'` only when needed (state, effects, event handlers)
+
+## File structure order
+
+1. `'use client'` directive (first line, only when state/effects/handlers are needed)
+2. Type-only imports (`import type { ... }`)
+3. Runtime imports from external packages
+4. Local type imports (`import type { ... } from './...'`)
+5. Internal imports (`@/components/...`, `@/utils/...`, `@/hooks/...`)
+6. Co-located imports (`./component.constants`, `./component.callbacks`)
+7. Component definition
+8. `export default`
+
+## Props
+
+- Complex props: define in a separate co-located `.types.ts` file
+- Simple props (children-only, 1-2 fields): inline typing is acceptable (`FC<{ children: ReactNode }>`)
+
+## Hooks ordering inside components
+
+1. Custom domain hooks (`useAuth`, `useAppSelector`, etc.)
+2. `useState`
+3. `useMemo` / `useCallback`
+4. Other hooks (`useRouter`, `usePathname`, `useFormContext`, etc.)
 
 ## Accessibility
 

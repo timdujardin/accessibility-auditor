@@ -1,5 +1,6 @@
 import type { AuditScope } from '@/@types/audit';
 import type { EarlEvaluation, WcagEmAssertion, WcagEmEvaluation, WcagEmModeObject } from '@/@types/earl';
+import type { SamplePageSummary } from '@/@types/sample';
 
 import { toArray } from '@/@types/earl';
 
@@ -35,6 +36,25 @@ const WCAG_FRAGMENT_TO_ID: Record<string, string> = Object.fromEntries(
   }),
 );
 
+interface ImportedResult {
+  criterionId: string;
+  samplePageId: string;
+  outcome: string;
+  description: string;
+  mode: string;
+}
+
+interface ImportedTechnology {
+  name: string;
+  url: string;
+}
+
+interface EntireSampleResult {
+  outcome: string;
+  description: string;
+  mode: string;
+}
+
 export interface ImportedAudit {
   title: string;
   commissioner: string;
@@ -42,19 +62,9 @@ export interface ImportedAudit {
   scope: AuditScope;
   conformanceTarget: string;
   accessibilityBaseline: string;
-  samplePages: Array<{
-    title: string;
-    url: string;
-    id: string;
-  }>;
-  results: Array<{
-    criterionId: string;
-    samplePageId: string;
-    outcome: string;
-    description: string;
-    mode: string;
-  }>;
-  technologies: Array<{ name: string; url: string }>;
+  samplePages: SamplePageSummary[];
+  results: ImportedResult[];
+  technologies: ImportedTechnology[];
   rawMetadata: unknown;
 }
 
@@ -243,11 +253,6 @@ const resolveV3ConformanceTarget = (target: string): string => {
   return CONFORMANCE_LEVEL_MAP[target] ?? 'AA';
 };
 
-/**
- * Parses a WCAG-EM Report Tool v3 evaluation into a structured audit import object.
- * @param {WcagEmEvaluation} data - The v3 evaluation data.
- * @returns {ImportedAudit} The parsed audit.
- */
 const isHttpUrl = (value: string): boolean => /^https?:\/\//.test(value);
 
 /**
@@ -280,6 +285,144 @@ const resolveMode = (mode: string | WcagEmModeObject | undefined): string => {
   return mode['@value'].replace(/^earl:/, '');
 };
 
+type EntireSampleMap = Map<string, EntireSampleResult>;
+
+/**
+ * Collects entire-sample-level (non-page-specific) assertion outcomes.
+ * These are assertions whose subject is not a known sample page.
+ */
+const collectEntireSampleResults = (assertions: WcagEmAssertion[], knownPageIds: Set<string>): EntireSampleMap => {
+  const map: EntireSampleMap = new Map();
+
+  for (const assertion of assertions) {
+    if (knownPageIds.has(assertion.subject.id)) {
+      continue;
+    }
+    const criterionId = resolveTestId(assertion.test.id);
+    if (!criterionId) {
+      continue;
+    }
+    const outcome = V3_OUTCOME_MAP[assertion.result.outcome.id] ?? 'untested';
+    if (outcome !== 'untested') {
+      map.set(criterionId, {
+        outcome,
+        description: assertion.result.description ?? '',
+        mode: resolveMode(assertion.mode),
+      });
+    }
+  }
+
+  return map;
+};
+
+/**
+ * Processes a single v3 assertion (with optional sub-assertions) into result rows.
+ * Only includes results whose subject is a known sample page.
+ */
+const processV3Assertion = (assertion: WcagEmAssertion, knownPageIds: Set<string>, results: ImportedResult[]): void => {
+  const criterionId = resolveTestId(assertion.test.id);
+  if (!criterionId) {
+    return;
+  }
+
+  const subAssertions = toArray(assertion.hasPart);
+
+  if (subAssertions.length > 0) {
+    for (const sub of subAssertions) {
+      const subjectId = sub.subject.id;
+      if (!knownPageIds.has(subjectId)) {
+        continue;
+      }
+
+      results.push({
+        criterionId,
+        samplePageId: subjectId,
+        outcome: V3_OUTCOME_MAP[sub.result.outcome.id] ?? 'untested',
+        description: sub.result.description ?? '',
+        mode: resolveMode(sub.mode),
+      });
+    }
+    return;
+  }
+
+  const subjectId = assertion.subject.id;
+  if (!knownPageIds.has(subjectId)) {
+    return;
+  }
+
+  results.push({
+    criterionId,
+    samplePageId: subjectId,
+    outcome: V3_OUTCOME_MAP[assertion.result.outcome.id] ?? 'untested',
+    description: assertion.result.description ?? '',
+    mode: resolveMode(assertion.mode),
+  });
+};
+
+/**
+ * For criteria where every page-level result is `untested`, overwrites
+ * those outcomes with the entire-sample outcome when available.
+ */
+const backfillUntestedFromEntireSample = (results: ImportedResult[], entireSampleResults: EntireSampleMap): void => {
+  const outcomesByCriterion = new Map<string, string[]>();
+  for (const result of results) {
+    const list = outcomesByCriterion.get(result.criterionId);
+    if (list) {
+      list.push(result.outcome);
+    } else {
+      outcomesByCriterion.set(result.criterionId, [result.outcome]);
+    }
+  }
+
+  const allUntestedCriteria = new Set<string>();
+  for (const [criterionId, outcomes] of outcomesByCriterion) {
+    if (outcomes.every((o) => o === 'untested')) {
+      allUntestedCriteria.add(criterionId);
+    }
+  }
+
+  for (const result of results) {
+    if (result.outcome === 'untested' && allUntestedCriteria.has(result.criterionId)) {
+      const entire = entireSampleResults.get(result.criterionId);
+      if (entire) {
+        result.outcome = entire.outcome;
+      }
+    }
+  }
+};
+
+/**
+ * For criteria that have entire-sample outcomes but no page-level results at all,
+ * distributes the entire-sample outcome to every sample page.
+ */
+const distributeEntireSampleResults = (
+  results: ImportedResult[],
+  entireSampleResults: EntireSampleMap,
+  samplePages: ImportedAudit['samplePages'],
+): void => {
+  const criteriaWithPageResults = new Set(results.map((r) => r.criterionId));
+
+  for (const [criterionId, entireResult] of entireSampleResults) {
+    if (criteriaWithPageResults.has(criterionId)) {
+      continue;
+    }
+    for (const page of samplePages) {
+      results.push({
+        criterionId,
+        samplePageId: page.id,
+        outcome: entireResult.outcome,
+        description: entireResult.description,
+        mode: entireResult.mode,
+      });
+    }
+  }
+};
+
+/**
+ * Parses a WCAG-EM Report Tool v3 evaluation into a structured audit import object.
+ * @param {WcagEmEvaluation} data - The v3 evaluation data.
+ * @returns {ImportedAudit} The parsed audit.
+ */
 const parseWcagEmEvaluation = (data: WcagEmEvaluation): ImportedAudit => {
   const conformanceTarget = resolveV3ConformanceTarget(data.defineScope.conformanceTarget);
 
@@ -298,113 +441,15 @@ const parseWcagEmEvaluation = (data: WcagEmEvaluation): ImportedAudit => {
   }));
 
   const knownPageIds = new Set(samplePages.map((p) => p.id));
+  const entireSampleResults = collectEntireSampleResults(data.auditSample, knownPageIds);
 
-  const entireSampleResults = new Map<string, { outcome: string; description: string; mode: string }>();
+  const results: ImportedResult[] = [];
   for (const assertion of data.auditSample) {
-    if (knownPageIds.has(assertion.subject.id)) {
-      continue;
-    }
-    const criterionId = resolveTestId(assertion.test.id);
-    if (!criterionId) {
-      continue;
-    }
-    const outcome = V3_OUTCOME_MAP[assertion.result.outcome.id] ?? 'untested';
-    if (outcome !== 'untested') {
-      entireSampleResults.set(criterionId, {
-        outcome,
-        description: assertion.result.description ?? '',
-        mode: resolveMode(assertion.mode),
-      });
-    }
+    processV3Assertion(assertion, knownPageIds, results);
   }
 
-  const results: ImportedAudit['results'] = [];
-
-  const processAssertion = (assertion: WcagEmAssertion): void => {
-    const criterionId = resolveTestId(assertion.test.id);
-    if (!criterionId) {
-      return;
-    }
-
-    const subAssertions = toArray(assertion.hasPart);
-
-    if (subAssertions.length > 0) {
-      for (const sub of subAssertions) {
-        const subjectId = sub.subject.id;
-        if (!knownPageIds.has(subjectId)) {
-          continue;
-        }
-
-        const subOutcome = V3_OUTCOME_MAP[sub.result.outcome.id] ?? 'untested';
-        results.push({
-          criterionId,
-          samplePageId: subjectId,
-          outcome: subOutcome,
-          description: sub.result.description ?? '',
-          mode: resolveMode(sub.mode),
-        });
-      }
-    } else {
-      const subjectId = assertion.subject.id;
-      if (!knownPageIds.has(subjectId)) {
-        return;
-      }
-
-      const outcome = V3_OUTCOME_MAP[assertion.result.outcome.id] ?? 'untested';
-      results.push({
-        criterionId,
-        samplePageId: subjectId,
-        outcome,
-        description: assertion.result.description ?? '',
-        mode: resolveMode(assertion.mode),
-      });
-    }
-  };
-
-  for (const assertion of data.auditSample) {
-    processAssertion(assertion);
-  }
-
-  const allPageUntestedCriteria = new Set<string>();
-  const outcomesByCriterion = new Map<string, string[]>();
-  for (const result of results) {
-    const list = outcomesByCriterion.get(result.criterionId);
-    if (list) {
-      list.push(result.outcome);
-    } else {
-      outcomesByCriterion.set(result.criterionId, [result.outcome]);
-    }
-  }
-  for (const [criterionId, outcomes] of outcomesByCriterion) {
-    if (outcomes.every((o) => o === 'untested')) {
-      allPageUntestedCriteria.add(criterionId);
-    }
-  }
-
-  for (const result of results) {
-    if (result.outcome === 'untested' && allPageUntestedCriteria.has(result.criterionId)) {
-      const entire = entireSampleResults.get(result.criterionId);
-      if (entire) {
-        result.outcome = entire.outcome;
-      }
-    }
-  }
-
-  const criteriaWithPageResults = new Set(results.map((r) => r.criterionId));
-  for (const [criterionId, entireResult] of entireSampleResults) {
-    if (criteriaWithPageResults.has(criterionId)) {
-      continue;
-    }
-    for (const page of samplePages) {
-      results.push({
-        criterionId,
-        samplePageId: page.id,
-        outcome: entireResult.outcome,
-        description: entireResult.description,
-        mode: entireResult.mode,
-      });
-    }
-  }
+  backfillUntestedFromEntireSample(results, entireSampleResults);
+  distributeEntireSampleResults(results, entireSampleResults, samplePages);
 
   const technologies = toArray(data.exploreTarget?.technologiesReliedUpon).map((tech) => ({
     name: typeof tech === 'string' ? tech : String(tech),
@@ -454,13 +499,8 @@ export const exportToEarl = (auditData: {
   creator: string;
   date: string;
   commissioner: string;
-  samplePages: Array<{ title: string; url: string; id: string }>;
-  assertions: Array<{
-    criterionId: string;
-    outcome: string;
-    description: string;
-    samplePageId: string;
-  }>;
+  samplePages: SamplePageSummary[];
+  assertions: Pick<ImportedResult, 'criterionId' | 'outcome' | 'description' | 'samplePageId'>[];
 }): Record<string, unknown> => {
   return {
     '@type': 'Evaluation',
